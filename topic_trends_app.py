@@ -130,5 +130,4 @@ if st.button("Fetch Trends"):
         st.error("No candidates selected.")
 
 # Additional functionalities (Placeholders for further development)
-st.header("Additional Data Integrations")
-st.write("Integrate with SEMRush, Answer The Public, etc.")
+
