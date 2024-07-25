@@ -38,7 +38,10 @@ def get_trends_data(topic_ids, geo='US', timeframe='today 12-m', gprop=''):
     
     # Retry logic for handling TooManyRequestsError
     attempts = 0
-    while attempts < 5:
+    max_attempts = 10
+    sleep_time = 120  # Increased sleep time to 2 minutes
+
+    while attempts < max_attempts:
         try:
             data = pytrends.interest_over_time()
             related_queries = pytrends.related_queries()
@@ -47,8 +50,8 @@ def get_trends_data(topic_ids, geo='US', timeframe='today 12-m', gprop=''):
             return data, related_queries
         except TooManyRequestsError:
             attempts += 1
-            st.warning("Rate limit reached, retrying...")
-            time.sleep(60)  # Wait for 60 seconds before retrying
+            st.warning(f"Rate limit reached, retrying in {sleep_time} seconds... (Attempt {attempts} of {max_attempts})")
+            time.sleep(sleep_time)  # Wait for a longer period before retrying
         except ResponseError as e:
             logger.error(f"ResponseError: {e}")
             st.error("Failed to fetch data due to a response error.")
