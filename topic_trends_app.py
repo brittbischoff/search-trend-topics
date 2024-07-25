@@ -4,7 +4,6 @@ import pandas as pd
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import time
-import random
 from pytrends.exceptions import TooManyRequestsError, ResponseError
 import logging
 
@@ -12,8 +11,16 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize pytrends request
-pytrends = TrendReq(hl='en-US', tz=360)
+# Initialize pytrends request with enhanced settings
+pytrends = TrendReq(
+    hl='en-US', 
+    tz=360, 
+    timeout=(10, 25), 
+    proxies=['https://34.203.233.13:80'], 
+    retries=2, 
+    backoff_factor=0.1, 
+    requests_args={'verify': False}
+)
 
 # Candidate names and their respective topic IDs
 candidates = {
@@ -33,7 +40,7 @@ us_states = ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "
              "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", 
              "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"]
 
-# Function to fetch Google Trends data and related queries with rate limiting
+# Function to fetch Google Trends data and related queries with exponential backoff
 def get_trends_data(topic_ids, geo='US', timeframe='today 12-m', gprop=''):
     all_data = pd.DataFrame()
     all_related_queries = {}
@@ -41,7 +48,7 @@ def get_trends_data(topic_ids, geo='US', timeframe='today 12-m', gprop=''):
     for topic_id in topic_ids:
         attempts = 0
         max_attempts = 10
-        sleep_time = random.randint(60, 180)  # Randomized sleep time between 1 and 3 minutes
+        base_sleep_time = 60  # Base sleep time in seconds
 
         while attempts < max_attempts:
             try:
@@ -55,8 +62,9 @@ def get_trends_data(topic_ids, geo='US', timeframe='today 12-m', gprop=''):
                 break
             except TooManyRequestsError:
                 attempts += 1
+                sleep_time = base_sleep_time * (2 ** attempts)  # Exponential backoff
                 st.warning(f"Rate limit reached, retrying in {sleep_time} seconds... (Attempt {attempts} of {max_attempts})")
-                time.sleep(sleep_time)  # Wait for a randomized period before retrying
+                time.sleep(sleep_time)  # Wait for an exponentially increasing period before retrying
             except ResponseError as e:
                 logger.error(f"ResponseError: {e}")
                 st.error("Failed to fetch data due to a response error.")
