@@ -27,6 +27,11 @@ candidates = {
     "Presidency of Joe Biden": "/g/11qnb9gr97"
 }
 
+# List of US states
+us_states = ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", 
+             "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", 
+             "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"]
+
 # Function to fetch Google Trends data and related queries with rate limiting
 def get_trends_data(topic_ids, geo='US', timeframe='today 12-m', gprop=''):
     pytrends.build_payload(topic_ids, cat=0, timeframe=timeframe, geo=geo, gprop=gprop)
@@ -74,7 +79,7 @@ st.title("Search Trend Report Automation - 2024 Presidential Candidates")
 selected_candidates = st.multiselect("Select the candidates to analyze", list(candidates.keys()))
 
 # User inputs for trend analysis
-geo = st.selectbox("Select the region", ["US", "AR", "AZ", "CO", "FL", "MD", "MO", "MT", "NE", "NV", "OR", "SD"])
+region = st.selectbox("Select the region", ["US"] + us_states, index=0)
 timeframe = st.selectbox("Select the timeframe", ["now 7-d", "today 1-m", "today 3-m", "today 12-m", "all"])
 gprop = st.selectbox("Select the property", ["", "news", "images", "youtube", "froogle"])
 
@@ -82,7 +87,7 @@ if st.button("Fetch Trends"):
     if selected_candidates:
         topic_ids = [candidates[candidate] for candidate in selected_candidates]
         with st.spinner("Fetching data..."):
-            data, related_queries = get_trends_data(topic_ids, geo, timeframe, gprop)
+            data, related_queries = get_trends_data(topic_ids, region, timeframe, gprop)
             if not data.empty:
                 st.success("Data fetched successfully!")
                 
@@ -107,5 +112,3 @@ if st.button("Fetch Trends"):
         st.error("No candidates selected.")
 
 # Additional functionalities (Placeholders for further development)
-st.header("Additional Data Integrations")
-st.write("Integrate with SEMRush, Answer The Public, etc.")
