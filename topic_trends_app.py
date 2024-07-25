@@ -12,14 +12,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize pytrends request with enhanced settings
-pytrends = TrendReq(
-    hl='en-US', 
-    tz=360, 
-    timeout=(10, 25), 
-    retries=2, 
-    backoff_factor=0.1, 
-    requests_args={'verify': False}
-)
+pytrends = TrendReq(hl='en-US', tz=360)
 
 # Candidate names and their respective topic IDs
 candidates = {
@@ -34,12 +27,7 @@ candidates = {
     "Presidency of Joe Biden": "/g/11qnb9gr97"
 }
 
-# List of US states
-us_states = ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", 
-             "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", 
-             "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"]
-
-# Function to fetch Google Trends data and related queries with exponential backoff
+# Function to fetch Google Trends data and related queries with manual retry logic
 def get_trends_data(topic_ids, geo='US', timeframe='today 12-m', gprop=''):
     all_data = pd.DataFrame()
     all_related_queries = {}
@@ -97,7 +85,6 @@ st.title("Search Trend Report Automation - 2024 Presidential Candidates")
 selected_candidates = st.multiselect("Select the candidates to analyze", list(candidates.keys()))
 
 # User inputs for trend analysis
-region = st.selectbox("Select the region", ["US"] + us_states, index=0)
 timeframe = st.selectbox("Select the timeframe", ["now 7-d", "today 1-m", "today 3-m", "today 12-m", "all"])
 gprop = st.selectbox("Select the property", ["", "news", "images", "youtube", "froogle"])
 
@@ -105,7 +92,7 @@ if st.button("Fetch Trends"):
     if selected_candidates:
         topic_ids = [candidates[candidate] for candidate in selected_candidates]
         with st.spinner("Fetching data..."):
-            data, related_queries = get_trends_data(topic_ids, region, timeframe, gprop)
+            data, related_queries = get_trends_data(topic_ids, 'US', timeframe, gprop)
             if not data.empty:
                 st.success("Data fetched successfully!")
                 
