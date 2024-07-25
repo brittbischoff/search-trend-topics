@@ -4,6 +4,7 @@ import pandas as pd
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import time
+import random
 from pytrends.exceptions import TooManyRequestsError, ResponseError
 import logging
 
@@ -34,30 +35,37 @@ us_states = ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "
 
 # Function to fetch Google Trends data and related queries with rate limiting
 def get_trends_data(topic_ids, geo='US', timeframe='today 12-m', gprop=''):
-    pytrends.build_payload(topic_ids, cat=0, timeframe=timeframe, geo=geo, gprop=gprop)
-    
-    # Retry logic for handling TooManyRequestsError
-    attempts = 0
-    max_attempts = 10
-    sleep_time = 120  # Increased sleep time to 2 minutes
+    all_data = pd.DataFrame()
+    all_related_queries = {}
 
-    while attempts < max_attempts:
-        try:
-            data = pytrends.interest_over_time()
-            related_queries = pytrends.related_queries()
-            if not data.empty:
-                data = data.drop(labels=['isPartial'], axis='columns')
-            return data, related_queries
-        except TooManyRequestsError:
-            attempts += 1
-            st.warning(f"Rate limit reached, retrying in {sleep_time} seconds... (Attempt {attempts} of {max_attempts})")
-            time.sleep(sleep_time)  # Wait for a longer period before retrying
-        except ResponseError as e:
-            logger.error(f"ResponseError: {e}")
-            st.error("Failed to fetch data due to a response error.")
+    for topic_id in topic_ids:
+        attempts = 0
+        max_attempts = 10
+        sleep_time = random.randint(60, 180)  # Randomized sleep time between 1 and 3 minutes
+
+        while attempts < max_attempts:
+            try:
+                pytrends.build_payload([topic_id], cat=0, timeframe=timeframe, geo=geo, gprop=gprop)
+                data = pytrends.interest_over_time()
+                related_queries = pytrends.related_queries()
+                if not data.empty:
+                    data = data.drop(labels=['isPartial'], axis='columns')
+                all_data = pd.concat([all_data, data], axis=1)
+                all_related_queries[topic_id] = related_queries[topic_id]
+                break
+            except TooManyRequestsError:
+                attempts += 1
+                st.warning(f"Rate limit reached, retrying in {sleep_time} seconds... (Attempt {attempts} of {max_attempts})")
+                time.sleep(sleep_time)  # Wait for a randomized period before retrying
+            except ResponseError as e:
+                logger.error(f"ResponseError: {e}")
+                st.error("Failed to fetch data due to a response error.")
+                return pd.DataFrame(), {}
+        if attempts == max_attempts:
+            st.error("Failed to fetch data after several attempts due to rate limiting.")
             return pd.DataFrame(), {}
-    st.error("Failed to fetch data after several attempts due to rate limiting.")
-    return pd.DataFrame(), {}
+
+    return all_data, all_related_queries
 
 # Function to create a word cloud from query data
 def create_wordcloud(query_data):
@@ -115,3 +123,5 @@ if st.button("Fetch Trends"):
         st.error("No candidates selected.")
 
 # Additional functionalities (Placeholders for further development)
+st.header("Additional Data Integrations")
+st.write("Integrate with SEMRush, Answer The Public, etc.")
