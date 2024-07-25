@@ -11,9 +11,24 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Initialize pytrends request
+pytrends = TrendReq(hl='en-US', tz=360)
+
+# Candidate names and their respective topic IDs
+candidates = {
+    "Kamala Harris": "/m/08sry2",
+    "Robert F Kennedy Jr": "/m/02l5km",
+    "Robert F. Kennedy Jr. 2024 presidential campaign": "/g/11ssfhnzyz",
+    "Donald Trump": "/m/0cqt90",
+    "Donald Trump 2024 presidential campaign": "/g/11sbx7l5r8",
+    "J. D. Vance": "/g/11c6v_wj1r",
+    "Joe Biden": "/m/012gx2",
+    "Joe Biden presidential campaign, 2024": "/g/11t6vtlz6y",
+    "Presidency of Joe Biden": "/g/11qnb9gr97"
+}
+
 # Function to fetch Google Trends data and related queries with rate limiting
 def get_trends_data(topic_ids, geo='US', timeframe='today 12-m', gprop=''):
-    pytrends = TrendReq(hl='en-US', tz=360)
     pytrends.build_payload(topic_ids, cat=0, timeframe=timeframe, geo=geo, gprop=gprop)
     
     # Retry logic for handling TooManyRequestsError
@@ -53,38 +68,43 @@ def display_rising_queries(rising_queries, timeframe):
         st.dataframe(rising_queries)
 
 # Streamlit app layout
-st.title("Search Trend Report Automation - Topic Entity Trends")
+st.title("Search Trend Report Automation - 2024 Presidential Candidates")
 
-# User inputs
-topic_ids = st.text_input("Enter the topic entity IDs (comma-separated)", "t/07v9zzw, t/07sx9r")  # Example topic IDs
-topic_ids_list = [topic.strip() for topic in topic_ids.split(',')]
+# Candidate selection
+selected_candidates = st.multiselect("Select the candidates to analyze", list(candidates.keys()))
+
+# User inputs for trend analysis
 geo = st.selectbox("Select the region", ["US", "AR", "AZ", "CO", "FL", "MD", "MO", "MT", "NE", "NV", "OR", "SD"])
 timeframe = st.selectbox("Select the timeframe", ["now 7-d", "today 1-m", "today 3-m", "today 12-m", "all"])
 gprop = st.selectbox("Select the property", ["", "news", "images", "youtube", "froogle"])
 
 if st.button("Fetch Trends"):
-    with st.spinner("Fetching data..."):
-        data, related_queries = get_trends_data(topic_ids_list, geo, timeframe, gprop)
-        if not data.empty:
-            st.success("Data fetched successfully!")
-            
-            # Plot the trend data
-            st.line_chart(data)
-            
-            # Display the data in a table
-            st.dataframe(data)
-            
-            # Display rising queries for each topic
-            for topic_id in topic_ids_list:
-                rising_queries = related_queries[topic_id]['rising']
-                display_rising_queries(rising_queries, timeframe)
+    if selected_candidates:
+        topic_ids = [candidates[candidate] for candidate in selected_candidates]
+        with st.spinner("Fetching data..."):
+            data, related_queries = get_trends_data(topic_ids, geo, timeframe, gprop)
+            if not data.empty:
+                st.success("Data fetched successfully!")
                 
-                # Create and display word cloud for rising queries
-                wordcloud = create_wordcloud(rising_queries)
-                if wordcloud:
-                    st.image(wordcloud.to_array(), use_column_width=True)
-        else:
-            st.error("No data found for the given parameters.")
+                # Plot the trend data
+                st.line_chart(data)
+                
+                # Display the data in a table
+                st.dataframe(data)
+                
+                # Display rising queries for each topic
+                for topic_id in topic_ids:
+                    rising_queries = related_queries[topic_id]['rising']
+                    display_rising_queries(rising_queries, timeframe)
+                    
+                    # Create and display word cloud for rising queries
+                    wordcloud = create_wordcloud(rising_queries)
+                    if wordcloud:
+                        st.image(wordcloud.to_array(), use_column_width=True)
+            else:
+                st.error("No data found for the given parameters.")
+    else:
+        st.error("No candidates selected.")
 
 # Additional functionalities (Placeholders for further development)
 st.header("Additional Data Integrations")

@@ -1,0 +1,6 @@
+streamlit
+pytrends
+pandas
+wordcloud
+matplotlib
+requests
